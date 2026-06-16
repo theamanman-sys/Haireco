@@ -1,0 +1,11 @@
+export const DEPOSIT_PERCENTAGE = 0.2;
+export const MARKETPLACE_COMMISSION_RATE = 0.08;
+export const LOYALTY_POINTS_PER_BOOKING = 10;
+export const LOYALTY_POINTS_PER_SPENT = 0.05;
+export const MAX_QUEUE_POSITION = 50;
+export const DEFAULT_CURRENCY = 'ETB';
+export const CURRENCY_SYMBOL = 'Br';
+export const BOOKING_SLOT_INTERVAL = 15;
+export const CANCELLATION_REFUND_WINDOW = 24;
+export const MAX_FREE_SALONS = 1;
+export const MAX_FREE_STAFF = 3;

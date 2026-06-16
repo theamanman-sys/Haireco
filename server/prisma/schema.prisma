@@ -1,0 +1,523 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  PROFESSIONAL
+  SALON_OWNER
+  SHOP
+  ADMIN
+}
+
+enum SubscriptionTier {
+  FREE
+  BASIC
+  PREMIUM
+  ENTERPRISE
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum PaymentMethod {
+  TELEBIRR
+  BANK_TRANSFER
+  CARD
+  CASH
+}
+
+enum DepositStatus {
+  PENDING
+  PAID
+  REFUNDED
+  FORFEITED
+}
+
+enum QueueStatus {
+  WAITING
+  CALLED
+  IN_SERVICE
+  COMPLETED
+  CANCELLED
+}
+
+enum ServiceCategory {
+  HAIRCUT
+  COLORING
+  STYLING
+  TREATMENT
+  BRAIDING
+  EXTENSIONS
+  BARBER
+  MAKEUP
+  NAILS
+  OTHER
+}
+
+enum ProductCategory {
+  SHAMPOO
+  CONDITIONER
+  STYLING
+  HAIR_COLOR
+  TREATMENT
+  TOOLS
+  ACCESSORIES
+  SKINCARE
+  MAKEUP
+  OTHER
+}
+
+enum SaleType {
+  B2C
+  B2B
+  BOTH
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum JobType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  FREELANCE
+  INTERNSHIP
+}
+
+enum JobStatus {
+  OPEN
+  CLOSED
+  FILLED
+}
+
+enum ApplicationStatus {
+  PENDING
+  REVIEWED
+  SHORTLISTED
+  INTERVIEWED
+  OFFERED
+  HIRED
+  REJECTED
+  WITHDRAWN
+}
+
+enum PaymentType {
+  SUBSCRIPTION
+  BOOKING_DEPOSIT
+  MARKETPLACE
+  ADVERTISING
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum AdType {
+  BANNER
+  FEATURED_SALON
+  TRAINING_COURSE
+  BRAND_PROMO
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  phone         String   @unique
+  passwordHash  String
+  role          UserRole
+  firstName     String
+  lastName      String
+  avatar        String?
+  isVerified    Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  professionalProfile  ProfessionalProfile?
+  customerProfile      CustomerProfile?
+  salonOwnerProfile    SalonOwnerProfile?
+  shopProfile          ShopProfile?
+
+  bookingsAsCustomer     Booking[]       @relation("CustomerBookings")
+  bookingsAsProfessional Booking[]       @relation("ProfessionalBookings")
+  reviews                Review[]
+  queueEntries           QueueEntry[]
+  jobApplications        JobApplication[]
+  orders                 Order[]         @relation("BuyerOrders")
+  payments               Payment[]
+  advertisements         Advertisement[]
+
+  staffMembers StaffMember[]
+  jobPosts     JobPost[]
+
+  @@index([role])
+  @@index([email])
+}
+
+model ProfessionalProfile {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bio              String?
+  yearsOfExperience Int     @default(0)
+  specializations  String[]
+  portfolioImages  String[]
+  resumeUrl        String?
+  verificationBadge Boolean @default(false)
+  averageRating    Float    @default(0)
+  totalReviews     Int      @default(0)
+}
+
+model CustomerProfile {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  loyaltyPoints Int      @default(0)
+  totalBookings Int      @default(0)
+  totalSpent    Float    @default(0)
+}
+
+model SalonOwnerProfile {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscriptionTier SubscriptionTier @default(FREE)
+  subscriptionExpiry DateTime?
+
+  salons Salon[]
+}
+
+model ShopProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shopName       String
+  businessLicense String?
+  commissionRate Float    @default(0.08)
+
+  products Product[]
+  orders   Order[]  @relation("ShopOrders")
+}
+
+model Salon {
+  id          String   @id @default(cuid())
+  ownerId     String
+  owner       SalonOwnerProfile @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  address     String
+  city        String
+  state       String?
+  country     String   @default("Ethiopia")
+  phone       String
+  email       String?
+  website     String?
+  latitude    Float?
+  longitude   Float?
+  coverImage  String?
+  logo        String?
+  images      String[]
+  workingHours Json
+  isActive    Boolean  @default(true)
+  isFeatured  Boolean  @default(false)
+  averageRating Float  @default(0)
+  totalReviews Int     @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  services      Service[]
+  staffMembers  StaffMember[]
+  bookings      Booking[]
+  queueEntries  QueueEntry[]
+  reviews       Review[]
+  jobPosts      JobPost[]
+
+  @@index([city])
+  @@index([isActive, isFeatured])
+}
+
+model Service {
+  id          String         @id @default(cuid())
+  salonId     String
+  salon       Salon          @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  duration    Int
+  price       Float
+  currency    String         @default("ETB")
+  category    ServiceCategory
+  isActive    Boolean        @default(true)
+
+  bookings Booking[]
+  queueEntries QueueEntry[]
+
+  @@index([salonId, isActive])
+  @@index([category])
+}
+
+model StaffMember {
+  id       String   @id @default(cuid())
+  salonId  String
+  salon    Salon    @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User     @relation(fields: [userId], references: [id])
+  position String
+  isActive Boolean  @default(true)
+  services String[]
+  schedule Json
+
+  queueEntries QueueEntry[]
+
+  @@unique([salonId, userId])
+}
+
+model Booking {
+  id              String        @id @default(cuid())
+  salonId         String
+  salon           Salon         @relation(fields: [salonId], references: [id])
+  customerId      String
+  customer        User          @relation("CustomerBookings", fields: [customerId], references: [id])
+  professionalId  String?
+  professional    User?         @relation("ProfessionalBookings", fields: [professionalId], references: [id])
+  serviceId       String
+  service         Service       @relation(fields: [serviceId], references: [id])
+  status          BookingStatus @default(PENDING)
+  startTime       DateTime
+  endTime         DateTime
+  depositAmount   Float         @default(0)
+  depositPaid     Boolean       @default(false)
+  totalAmount     Float
+  notes           String?
+  queuePosition   Int?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  deposit BookingDeposit?
+  review  Review?
+  queueEntry QueueEntry?
+
+  @@index([salonId, startTime])
+  @@index([customerId])
+  @@index([professionalId])
+  @@index([status])
+}
+
+model BookingDeposit {
+  id            String        @id @default(cuid())
+  bookingId     String        @unique
+  booking       Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  amount        Float
+  method        PaymentMethod
+  transactionId String?
+  status        DepositStatus @default(PENDING)
+  paidAt        DateTime?
+  refundedAt    DateTime?
+}
+
+model QueueEntry {
+  id               String      @id @default(cuid())
+  salonId          String
+  salon            Salon       @relation(fields: [salonId], references: [id])
+  customerId       String
+  customer         User        @relation(fields: [customerId], references: [id])
+  serviceId        String
+  service          Service     @relation(fields: [serviceId], references: [id])
+  professionalId   String?
+  professional     StaffMember? @relation(fields: [professionalId], references: [id])
+  bookingId        String?   @unique
+  booking          Booking?  @relation(fields: [bookingId], references: [id])
+  position         Int
+  estimatedWaitTime Int
+  checkedInAt      DateTime    @default(now())
+  status           QueueStatus @default(WAITING)
+
+  @@index([salonId, status])
+  @@index([position])
+}
+
+model Review {
+  id             String   @id @default(cuid())
+  bookingId      String   @unique
+  booking        Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  customerId     String
+  customer       User     @relation(fields: [customerId], references: [id])
+  salonId        String
+  salon          Salon    @relation(fields: [salonId], references: [id])
+  professionalId String?
+  rating         Int
+  comment        String?
+  images         String[]
+  createdAt      DateTime @default(now())
+
+  @@index([salonId])
+  @@index([professionalId])
+}
+
+model Product {
+  id               String         @id @default(cuid())
+  shopId           String
+  shop             ShopProfile    @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name             String
+  description      String?
+  category         ProductCategory
+  price            Float
+  wholesalePrice   Float?
+  currency         String         @default("ETB")
+  stock            Int            @default(0)
+  images           String[]
+  saleType         SaleType       @default(BOTH)
+  minOrderQuantity Int            @default(1)
+  isActive         Boolean        @default(true)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  orderItems OrderItem[]
+
+  @@index([shopId, isActive])
+  @@index([category])
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  buyerId         String
+  buyer           User        @relation("BuyerOrders", fields: [buyerId], references: [id])
+  shopId          String
+  shop            ShopProfile @relation("ShopOrders", fields: [shopId], references: [id])
+  totalAmount     Float
+  commissionAmount Float      @default(0)
+  status          OrderStatus @default(PENDING)
+  shippingAddress String?
+  paymentMethod   PaymentMethod
+  paidAt          DateTime?
+  createdAt       DateTime    @default(now())
+
+  items OrderItem[]
+
+  @@index([buyerId])
+  @@index([shopId])
+  @@index([status])
+}
+
+model OrderItem {
+  id        String @id @default(cuid())
+  orderId   String
+  order     Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  unitPrice Float
+  totalPrice Float
+
+  @@unique([orderId, productId])
+}
+
+model JobPost {
+  id                 String        @id @default(cuid())
+  salonId            String
+  salon              Salon         @relation(fields: [salonId], references: [id])
+  ownerId            String
+  owner              User          @relation(fields: [ownerId], references: [id])
+  title              String
+  description        String
+  requirements       String[]
+  jobType            JobType
+  salaryRange        String?
+  location           String
+  isRemote           Boolean       @default(false)
+  status             JobStatus     @default(OPEN)
+  applicationDeadline DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  applications JobApplication[]
+
+  @@index([salonId])
+  @@index([status])
+  @@index([jobType])
+}
+
+model JobApplication {
+  id           String            @id @default(cuid())
+  jobId        String
+  job          JobPost           @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  applicantId  String
+  applicant    User              @relation(fields: [applicantId], references: [id])
+  coverLetter  String?
+  resumeUrl    String?
+  status       ApplicationStatus @default(PENDING)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@unique([jobId, applicantId])
+  @@index([applicantId])
+  @@index([status])
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  amount        Float
+  currency      String        @default("ETB")
+  method        PaymentMethod
+  type          PaymentType
+  status        PaymentStatus @default(PENDING)
+  reference     String?
+  transactionId String?
+  createdAt     DateTime      @default(now())
+}
+
+model Advertisement {
+  id            String   @id @default(cuid())
+  advertiserId  String
+  advertiser    User     @relation(fields: [advertiserId], references: [id])
+  title         String
+  type          AdType
+  imageUrl      String
+  targetUrl     String
+  startDate     DateTime
+  endDate       DateTime
+  budget        Float
+  impressions   Int      @default(0)
+  clicks        Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  @@index([type, isActive])
+  @@index([endDate])
+}
+
+model SubscriptionPlan {
+  id             String           @id @default(cuid())
+  tier           SubscriptionTier @unique
+  name           String
+  price          Float
+  currency       String           @default("ETB")
+  interval       String           @default("monthly")
+  features       String[]
+  maxStaff       Int
+  maxSalons      Int
+  hasMarketplace Boolean          @default(false)
+  hasJobBoard    Boolean          @default(false)
+  hasAnalytics   Boolean          @default(false)
+}

@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.env
+*.log
+.DS_Store
+Thumbs.db
+
+# Server
+server/dist/
+
+# Web
+web/dist/
+
+# Mobile
+mobile/.expo/
+mobile/node_modules/

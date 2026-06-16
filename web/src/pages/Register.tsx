@@ -1,0 +1,78 @@
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../store/authStore';
+import toast from 'react-hot-toast';
+
+const roles = [
+  { value: 'CUSTOMER', label: 'Customer', desc: 'Book appointments and shop products' },
+  { value: 'PROFESSIONAL', label: 'Professional', desc: 'Find jobs and showcase your work' },
+  { value: 'SALON_OWNER', label: 'Salon Owner', desc: 'List and manage your salon' },
+  { value: 'SHOP', label: 'Shop Owner', desc: 'Sell beauty products' },
+];
+
+export default function Register() {
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', password: '', role: 'CUSTOMER' });
+  const { register, isLoading } = useAuthStore();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await register(form);
+      toast.success('Account created!');
+      navigate('/');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Registration failed');
+    }
+  };
+
+  return (
+    <div className="min-h-[80vh] flex items-center justify-center px-4 py-8">
+      <div className="card max-w-lg w-full">
+        <h1 className="text-2xl font-bold text-center mb-6 text-cream" style={{ fontFamily: "'Playfair Display', serif" }}>Create Account</h1>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-cream/70 mb-1">First Name</label>
+              <input className="input-field" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} required />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-cream/70 mb-1">Last Name</label>
+              <input className="input-field" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} required />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-cream/70 mb-1">Email</label>
+            <input type="email" className="input-field" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-cream/70 mb-1">Phone</label>
+            <input type="tel" className="input-field" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-cream/70 mb-1">Password</label>
+            <input type="password" className="input-field" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required minLength={6} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-cream/70 mb-2">I am a</label>
+            <div className="grid grid-cols-2 gap-2">
+              {roles.map((r) => (
+                <button type="button" key={r.value} onClick={() => setForm({ ...form, role: r.value })}
+                  className={`p-3 text-left rounded border text-sm transition-all duration-300 ${form.role === r.value ? 'border-primary-600 bg-primary-600/10 text-primary-400' : 'border-white/10 hover:border-white/20 text-cream/55'}`}>
+                  <div className="font-medium">{r.label}</div>
+                  <div className="text-xs text-cream/40">{r.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+          <button type="submit" className="btn-primary w-full" disabled={isLoading}>
+            {isLoading ? 'Creating account...' : 'Create Account'}
+          </button>
+        </form>
+        <p className="text-center text-sm text-cream/55 mt-4">
+          Already have an account? <Link to="/login" className="text-primary-600 hover:text-gold-500 transition-colors">Login</Link>
+        </p>
+      </div>
+    </div>
+  );
+}
