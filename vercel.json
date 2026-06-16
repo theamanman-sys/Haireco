@@ -1,0 +1,17 @@
+{
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "@vercel/node@3",
+      "includeFiles": "server/**"
+    }
+  },
+  "buildCommand": "cd server && npx prisma generate && cd ../web && npm run build",
+  "outputDirectory": "web/dist",
+  "installCommand": "npm install",
+  "framework": "vite",
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/api", "destination": "/api" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
