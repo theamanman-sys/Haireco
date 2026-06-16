@@ -4,6 +4,7 @@ import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { Star, MapPin, Clock, Phone, Scissors, User } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useTranslate } from '../i18n/useTranslate';
 
 interface SalonDetailData {
   id: string;
@@ -25,6 +26,7 @@ interface SalonDetailData {
 }
 
 export default function SalonDetail() {
+  const t = useTranslate();
   const { id } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuthStore();
@@ -43,7 +45,7 @@ export default function SalonDetail() {
 
   const handleBook = async () => {
     if (!isAuthenticated) { navigate('/login'); return; }
-    if (!selectedService || !bookingDate) { toast.error('Select a service and date'); return; }
+    if (!selectedService || !bookingDate) { toast.error(t('salonDetail.selectServiceAndDate')); return; }
     try {
       await api.post('/bookings', {
         salonId: id,
@@ -51,15 +53,15 @@ export default function SalonDetail() {
         professionalId: selectedProfessional || undefined,
         startTime: bookingDate,
       });
-      toast.success('Booking created! Pay deposit to confirm.');
+      toast.success(t('salonDetail.bookingCreated'));
       navigate('/profile');
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Booking failed');
+      toast.error(err.response?.data?.message || t('salonDetail.bookingFailed'));
     }
   };
 
-  if (loading) return <div className="text-center py-20 text-cream/55">Loading...</div>;
-  if (!salon) return <div className="text-center py-20 text-cream/55">Salon not found</div>;
+  if (loading) return <div className="text-center py-20 text-cream/55">{t('salonDetail.loading')}</div>;
+  if (!salon) return <div className="text-center py-20 text-cream/55">{t('salonDetail.notFound')}</div>;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
@@ -70,19 +72,19 @@ export default function SalonDetail() {
             <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-cream/55">
               <span className="flex items-center gap-1"><MapPin className="w-4 h-4" />{salon.address}, {salon.city}</span>
               <span className="flex items-center gap-1"><Phone className="w-4 h-4" />{salon.phone}</span>
-              <span className="flex items-center gap-1"><Star className="w-4 h-4 text-gold-500" />{salon.averageRating.toFixed(1)} ({salon.totalReviews} reviews)</span>
+              <span className="flex items-center gap-1"><Star className="w-4 h-4 text-gold-500" />{salon.averageRating.toFixed(1)} ({salon.totalReviews} {t('salonDetail.reviews')})</span>
             </div>
           </div>
 
           {salon.description && (
             <div className="card">
-              <h2 className="font-semibold mb-2 text-cream">About</h2>
+              <h2 className="font-semibold mb-2 text-cream">{t('salonDetail.about')}</h2>
               <p className="text-cream/55 text-sm">{salon.description}</p>
             </div>
           )}
 
           <div className="card">
-            <h2 className="font-semibold mb-4 flex items-center gap-2 text-cream"><Scissors className="w-4 h-4" /> Services & Pricing</h2>
+            <h2 className="font-semibold mb-4 flex items-center gap-2 text-cream"><Scissors className="w-4 h-4" /> {t('salonDetail.servicesPricing')}</h2>
             <div className="space-y-3">
               {salon.services.map((s) => (
                 <label key={s.id} className={`flex items-center justify-between p-3 rounded border cursor-pointer transition-all duration-300 ${selectedService === s.id ? 'border-primary-600 bg-primary-600/10' : 'border-white/[0.065] hover:border-white/20'}`}>
@@ -90,7 +92,7 @@ export default function SalonDetail() {
                     <input type="radio" name="service" value={s.id} checked={selectedService === s.id} onChange={() => setSelectedService(s.id)} className="accent-primary-600" />
                     <div>
                       <div className="font-medium text-sm text-cream">{s.name}</div>
-                      <div className="text-xs text-cream/55">{s.duration} min</div>
+                      <div className="text-xs text-cream/55">{s.duration} {t('salonDetail.min')}</div>
                     </div>
                   </div>
                   <div className="font-semibold text-primary-600">Br {s.price}</div>
@@ -101,7 +103,7 @@ export default function SalonDetail() {
 
           {salon.reviews.length > 0 && (
             <div className="card">
-              <h2 className="font-semibold mb-4 text-cream">Reviews</h2>
+              <h2 className="font-semibold mb-4 text-cream">{t('salonDetail.reviews')}</h2>
               <div className="space-y-4">
                 {salon.reviews.map((r) => (
                   <div key={r.id} className="border-b border-white/[0.065] pb-3 last:border-0">
@@ -120,12 +122,12 @@ export default function SalonDetail() {
 
         <div className="space-y-6">
           <div className="card sticky top-24">
-            <h2 className="font-semibold mb-4 text-cream" style={{ fontFamily: "'Playfair Display', serif" }}>Book Appointment</h2>
+            <h2 className="font-semibold mb-4 text-cream" style={{ fontFamily: "'Playfair Display', serif" }}>{t('salonDetail.bookAppointment')}</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-cream/70 mb-1">Service</label>
+                <label className="block text-sm font-medium text-cream/70 mb-1">{t('salonDetail.service')}</label>
                 <select className="input-field" value={selectedService} onChange={(e) => setSelectedService(e.target.value)}>
-                  <option value="">Select a service</option>
+                  <option value="">{t('salonDetail.selectService')}</option>
                   {salon.services.map((s) => (
                     <option key={s.id} value={s.id}>{s.name} - Br {s.price}</option>
                   ))}
@@ -133,9 +135,9 @@ export default function SalonDetail() {
               </div>
               {salon.staffMembers.length > 0 && (
                 <div>
-                  <label className="block text-sm font-medium text-cream/70 mb-1">Professional (optional)</label>
+                  <label className="block text-sm font-medium text-cream/70 mb-1">{t('salonDetail.professionalOptional')}</label>
                   <select className="input-field" value={selectedProfessional} onChange={(e) => setSelectedProfessional(e.target.value)}>
-                    <option value="">Any professional</option>
+                    <option value="">{t('salonDetail.anyProfessional')}</option>
                     {salon.staffMembers.map((s) => (
                       <option key={s.id} value={s.id}>{s.user.firstName} {s.user.lastName} - {s.position}</option>
                     ))}
@@ -143,11 +145,11 @@ export default function SalonDetail() {
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium text-cream/70 mb-1">Date & Time</label>
+                <label className="block text-sm font-medium text-cream/70 mb-1">{t('salonDetail.dateTime')}</label>
                 <input type="datetime-local" className="input-field" value={bookingDate} onChange={(e) => setBookingDate(e.target.value)} />
               </div>
               <button onClick={handleBook} className="btn-primary w-full">
-                Book Now (20% Deposit)
+                {t('salonDetail.bookNow')}
               </button>
             </div>
           </div>

@@ -3,6 +3,7 @@ import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { Link } from 'react-router-dom';
 import { Calendar, Users, DollarSign, Scissors, TrendingUp, Clock, Building2 } from 'lucide-react';
+import { useTranslate } from '../i18n/useTranslate';
 
 interface DashboardData {
   salons: { id: string; name: string; city: string; isActive: boolean }[];
@@ -13,6 +14,7 @@ interface DashboardData {
 }
 
 export default function Dashboard() {
+  const t = useTranslate();
   const { user } = useAuthStore();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -33,16 +35,16 @@ export default function Dashboard() {
   }, []);
 
   if (user?.role !== 'SALON_OWNER') {
-    return <div className="text-center py-20 text-cream/55">This dashboard is for salon owners.</div>;
+    return <div className="text-center py-20 text-cream/55">{t('dashboard.notOwner')}</div>;
   }
 
-  if (loading) return <div className="text-center py-20 text-cream/55">Loading dashboard...</div>;
+  if (loading) return <div className="text-center py-20 text-cream/55">{t('dashboard.loading')}</div>;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-cream" style={{ fontFamily: "'Playfair Display', serif" }}>Owner Dashboard</h1>
-        <Link to="/register?role=SALON_OWNER" className="btn-primary">Add New Salon</Link>
+        <h1 className="text-3xl font-bold text-cream" style={{ fontFamily: "'Playfair Display', serif" }}>{t('dashboard.title')}</h1>
+        <Link to="/register?role=SALON_OWNER" className="btn-primary">{t('dashboard.addNewSalon')}</Link>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -51,36 +53,36 @@ export default function Dashboard() {
             <Calendar className="w-8 h-8 text-primary-600" />
             <span className="text-2xl font-bold text-cream">{data?.todayBookings || 0}</span>
           </div>
-          <p className="text-sm text-cream/55">Today's Bookings</p>
+          <p className="text-sm text-cream/55">{t('dashboard.todayBookings')}</p>
         </div>
         <div className="card">
           <div className="flex items-center gap-3 mb-2">
             <DollarSign className="w-8 h-8 text-gold-500" />
             <span className="text-2xl font-bold text-cream">Br {data?.totalRevenue?.toLocaleString() || 0}</span>
           </div>
-          <p className="text-sm text-cream/55">Total Revenue</p>
+          <p className="text-sm text-cream/55">{t('dashboard.totalRevenue')}</p>
         </div>
         <div className="card">
           <div className="flex items-center gap-3 mb-2">
             <Users className="w-8 h-8 text-primary-600" />
             <span className="text-2xl font-bold text-cream">{data?.activeStaff || 0}</span>
           </div>
-          <p className="text-sm text-cream/55">Active Staff</p>
+          <p className="text-sm text-cream/55">{t('dashboard.activeStaff')}</p>
         </div>
         <div className="card">
           <div className="flex items-center gap-3 mb-2">
             <Scissors className="w-8 h-8 text-primary-600" />
             <span className="text-2xl font-bold text-cream">{data?.salons?.length || 0}</span>
           </div>
-          <p className="text-sm text-cream/55">My Salons</p>
+          <p className="text-sm text-cream/55">{t('dashboard.mySalons')}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card">
-          <h2 className="font-semibold mb-4 flex items-center gap-2 text-cream"><Building2 className="w-4 h-4" /> My Salons</h2>
+          <h2 className="font-semibold mb-4 flex items-center gap-2 text-cream"><Building2 className="w-4 h-4" /> {t('dashboard.mySalons')}</h2>
           {data?.salons?.length === 0 ? (
-            <p className="text-sm text-cream/55">No salons yet. Create your first one!</p>
+            <p className="text-sm text-cream/55">{t('dashboard.noSalons')}</p>
           ) : (
             <div className="space-y-3">
               {data?.salons?.map((s: any) => (
@@ -89,7 +91,7 @@ export default function Dashboard() {
                     <div className="font-medium text-cream">{s.name}</div>
                     <div className="text-xs text-cream/55">{s.city}</div>
                   </div>
-                  <Link to={`/salons/${s.id}`} className="text-sm text-primary-600 hover:text-gold-500 transition-colors">View</Link>
+                  <Link to={`/salons/${s.id}`} className="text-sm text-primary-600 hover:text-gold-500 transition-colors">{t('dashboard.view')}</Link>
                 </div>
               ))}
             </div>
@@ -97,9 +99,9 @@ export default function Dashboard() {
         </div>
 
         <div className="card">
-          <h2 className="font-semibold mb-4 flex items-center gap-2 text-cream"><Clock className="w-4 h-4" /> Recent Bookings</h2>
+          <h2 className="font-semibold mb-4 flex items-center gap-2 text-cream"><Clock className="w-4 h-4" /> {t('dashboard.recentBookings')}</h2>
           {data?.recentBookings?.length === 0 ? (
-            <p className="text-sm text-cream/55">No bookings yet.</p>
+            <p className="text-sm text-cream/55">{t('dashboard.noBookings')}</p>
           ) : (
             <div className="space-y-3">
               {data?.recentBookings?.map((b: any) => (

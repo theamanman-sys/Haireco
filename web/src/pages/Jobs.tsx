@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import api from '../services/api';
 import { Briefcase, MapPin, Clock, Building2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTranslate } from '../i18n/useTranslate';
 
 interface JobSummary {
   id: string;
@@ -16,6 +17,7 @@ interface JobSummary {
 }
 
 export default function Jobs() {
+  const t = useTranslate();
   const [jobs, setJobs] = useState<JobSummary[]>([]);
   const [jobType, setJobType] = useState('');
   const [loading, setLoading] = useState(true);
@@ -31,18 +33,18 @@ export default function Jobs() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-      <h1 className="text-3xl font-bold mb-6 text-cream" style={{ fontFamily: "'Playfair Display', serif" }}>Talent Hub</h1>
+      <h1 className="text-3xl font-bold mb-6 text-cream" style={{ fontFamily: "'Playfair Display', serif" }}>{t('jobs.title')}</h1>
       <div className="flex flex-wrap gap-2 mb-8">
-        {['', 'FULL_TIME', 'PART_TIME', 'CONTRACT', 'FREELANCE', 'INTERNSHIP'].map((t) => (
-          <button key={t} onClick={() => setJobType(t)} className={`px-4 py-1.5 rounded text-xs tracking-widest uppercase transition-all duration-300 ${jobType === t ? 'bg-primary-600 text-white' : 'text-cream/55 border border-white/10 hover:border-primary-600/30'}`}>
-            {t.replace('_', ' ') || 'All'}
+        {['', 'FULL_TIME', 'PART_TIME', 'CONTRACT', 'FREELANCE', 'INTERNSHIP'].map((type) => (
+          <button key={type} onClick={() => setJobType(type)} className={`px-4 py-1.5 rounded text-xs tracking-widest uppercase transition-all duration-300 ${jobType === type ? 'bg-primary-600 text-white' : 'text-cream/55 border border-white/10 hover:border-primary-600/30'}`}>
+            {type.replace('_', ' ') || t('jobs.all')}
           </button>
         ))}
       </div>
       {loading ? (
-        <p className="text-cream/55">Loading jobs...</p>
+        <p className="text-cream/55">{t('jobs.loading')}</p>
       ) : jobs.length === 0 ? (
-        <p className="text-cream/55">No jobs listed yet.</p>
+        <p className="text-cream/55">{t('jobs.noneFound')}</p>
       ) : (
         <div className="space-y-4">
           {jobs.map((job) => (
@@ -57,7 +59,7 @@ export default function Jobs() {
                     {job.salaryRange && <span className="font-medium text-primary-600">{job.salaryRange}</span>}
                   </div>
                 </div>
-                <span className="text-xs text-cream/40">{job._count.applications} applicants</span>
+                <span className="text-xs text-cream/40">{job._count.applications} {t('jobs.applicants')}</span>
               </div>
             </Link>
           ))}

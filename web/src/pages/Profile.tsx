@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { Calendar, Star, ShoppingBag, Briefcase, User as UserIcon, MapPin } from 'lucide-react';
+import { useTranslate } from '../i18n/useTranslate';
 
 export default function Profile() {
+  const t = useTranslate();
   const { user } = useAuthStore();
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,11 +32,11 @@ export default function Profile() {
         </div>
       </div>
 
-      <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-cream"><Calendar className="w-5 h-5" /> My Bookings</h2>
+      <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-cream"><Calendar className="w-5 h-5" /> {t('profile.myBookings')}</h2>
       {loading ? (
-        <p className="text-cream/55">Loading...</p>
+        <p className="text-cream/55">{t('profile.loading')}</p>
       ) : bookings.length === 0 ? (
-        <p className="text-cream/55">No bookings yet.</p>
+        <p className="text-cream/55">{t('profile.noBookings')}</p>
       ) : (
         <div className="space-y-3">
           {bookings.map((b) => (
@@ -47,7 +49,7 @@ export default function Profile() {
               <div className="text-right">
                 <div className="font-semibold text-cream">Br {b.totalAmount}</div>
                 <span className={`text-xs px-2 py-0.5 rounded-full ${b.status === 'COMPLETED' ? 'bg-green-900/30 text-green-400' : b.status === 'CONFIRMED' ? 'bg-blue-900/30 text-blue-400' : b.status === 'CANCELLED' ? 'bg-red-900/30 text-red-400' : 'bg-yellow-900/30 text-yellow-400'}`}>{b.status}</span>
-                {b.deposit?.status && <div className="text-xs text-cream/40 mt-1">Deposit: {b.deposit.status}</div>}
+                {b.deposit?.status && <div className="text-xs text-cream/40 mt-1">{t('profile.deposit')}: {b.deposit.status}</div>}
               </div>
             </div>
           ))}

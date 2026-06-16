@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import api from '../services/api';
 import { Megaphone, DollarSign, Calendar, Eye, Target } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTranslate } from '../i18n/useTranslate';
 
 interface Ad {
   id: string;
@@ -17,6 +18,7 @@ interface Ad {
 }
 
 export default function Ads() {
+  const t = useTranslate();
   const [ads, setAds] = useState<Ad[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -31,20 +33,20 @@ export default function Ads() {
     <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-cream" style={{ fontFamily: "'Playfair Display', serif" }}>Advertise</h1>
-          <p className="text-cream/55 mt-1">Promote your salon or products to thousands of potential customers.</p>
+          <h1 className="text-3xl font-bold text-cream" style={{ fontFamily: "'Playfair Display', serif" }}>{t('ads.title')}</h1>
+          <p className="text-cream/55 mt-1">{t('ads.subtitle')}</p>
         </div>
-        <Link to="/ads/create" className="btn-primary">Create Campaign</Link>
+        <Link to="/ads/create" className="btn-primary">{t('ads.createCampaign')}</Link>
       </div>
 
       {loading ? (
-        <p className="text-cream/55">Loading campaigns...</p>
+        <p className="text-cream/55">{t('ads.loading')}</p>
       ) : ads.length === 0 ? (
         <div className="card text-center py-16">
           <Megaphone className="w-12 h-12 mx-auto mb-4 text-cream/20" />
-          <h2 className="text-xl font-semibold text-cream mb-2">No campaigns yet</h2>
-          <p className="text-cream/55 mb-6">Launch your first advertising campaign to reach more customers.</p>
-          <Link to="/ads/create" className="btn-primary">Start Advertising</Link>
+          <h2 className="text-xl font-semibold text-cream mb-2">{t('ads.noCampaigns')}</h2>
+          <p className="text-cream/55 mb-6">{t('ads.noCampaignsDesc')}</p>
+          <Link to="/ads/create" className="btn-primary">{t('ads.startAdvertising')}</Link>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

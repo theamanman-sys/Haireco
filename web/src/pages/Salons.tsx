@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { Star, MapPin, Scissors } from 'lucide-react';
+import { useTranslate } from '../i18n/useTranslate';
 
 interface SalonSummary {
   id: string;
@@ -16,6 +17,7 @@ interface SalonSummary {
 }
 
 export default function Salons() {
+  const t = useTranslate();
   const [salons, setSalons] = useState<SalonSummary[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -31,21 +33,21 @@ export default function Salons() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-      <h1 className="text-3xl font-bold mb-6 text-cream" style={{ fontFamily: "'Playfair Display', serif" }}>Find a Salon</h1>
+      <h1 className="text-3xl font-bold mb-6 text-cream" style={{ fontFamily: "'Playfair Display', serif" }}>{t('salons.title')}</h1>
       <div className="relative max-w-md mb-8">
         <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-cream/40" />
         <input
           type="text"
-          placeholder="Search by city..."
+          placeholder={t('salons.searchPlaceholder')}
           className="input-field pl-10"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
       {loading ? (
-        <p className="text-cream/55">Loading salons...</p>
+        <p className="text-cream/55">{t('salons.loading')}</p>
       ) : salons.length === 0 ? (
-        <p className="text-cream/55">No salons found.</p>
+        <p className="text-cream/55">{t('salons.noneFound')}</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {salons.map((salon) => (
@@ -69,10 +71,10 @@ export default function Salons() {
                   </span>
                 ))}
                 {salon.services.length > 3 && (
-                  <span className="text-xs text-cream/40">+{salon.services.length - 3} more</span>
+                  <span className="text-xs text-cream/40">+{salon.services.length - 3} {t('salons.more')}</span>
                 )}
               </div>
-              <p className="text-xs text-cream/40">{salon._count.reviews} reviews</p>
+              <p className="text-xs text-cream/40">{salon._count.reviews} {t('salons.reviews')}</p>
             </Link>
           ))}
         </div>
