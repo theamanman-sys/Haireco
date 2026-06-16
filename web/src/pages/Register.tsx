@@ -51,7 +51,7 @@ export default function Register() {
           </div>
           <div>
             <label className="block text-sm font-medium text-cream/70 mb-1">Password</label>
-            <input type="password" className="input-field" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required minLength={6} />
+            <input type="password" autoComplete="new-password" className="input-field" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required minLength={6} />
           </div>
           <div>
             <label className="block text-sm font-medium text-cream/70 mb-2">I am a</label>

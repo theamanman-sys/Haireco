@@ -31,7 +31,7 @@ export default function Login() {
           </div>
           <div>
             <label className="block text-sm font-medium text-cream/70 mb-1">Password</label>
-            <input type="password" className="input-field" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <input type="password" autoComplete="current-password" className="input-field" value={password} onChange={(e) => setPassword(e.target.value)} required />
           </div>
           <button type="submit" className="btn-primary w-full" disabled={isLoading}>
             {isLoading ? 'Loading...' : 'Login'}
