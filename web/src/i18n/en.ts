@@ -89,6 +89,13 @@ const en = {
     noneFound: 'No salons found.',
     reviews: 'reviews',
     more: 'more',
+    mapView: 'Map View',
+    listView: 'List View',
+    mapLoading: 'Loading nearby places...',
+    mapGeolocationError: 'Your browser does not support geolocation.',
+    mapLocationError: 'Could not access your location. Please allow location permissions.',
+    mapLoadError: 'Could not load Google Maps. Check your API key.',
+    nearbyPlaces: 'Nearby Salons & Spas',
   },
   salonDetail: {
     loading: 'Loading...',

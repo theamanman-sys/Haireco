@@ -89,6 +89,13 @@ const am: Translations = {
     noneFound: 'ምንም ሳሎኖች አልተገኙም።',
     reviews: 'ግምገማዎች',
     more: 'ተጨማሪ',
+    mapView: 'ካርታ እይታ',
+    listView: 'ዝርዝር እይታ',
+    mapLoading: 'በአቅራቢያ ያሉ ቦታዎችን በማምጣት ላይ...',
+    mapGeolocationError: 'የእርስዎ አሳሽ መገኛ ቦታን አይደግፍም።',
+    mapLocationError: 'መገኛ ቦታዎን ማግኘት አልተቻለም። እባክዎ የአካባቢ ፍቃድ ይስጡ።',
+    mapLoadError: 'ጎግል ካርታ መጫን አልተቻለም። የኤፒአይ ቁልፍዎን ያረጋግጡ።',
+    nearbyPlaces: 'በአቅራቢያ ያሉ ሳሎኖች እና ስፓዎች',
   },
   salonDetail: {
     loading: 'በማምጣት ላይ...',
