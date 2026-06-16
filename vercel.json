@@ -1,7 +1,6 @@
 {
   "functions": {
-    "api/**/*.ts": {
-      "runtime": "@vercel/node@3",
+    "api/index.ts": {
       "includeFiles": "server/**"
     }
   },
@@ -10,7 +9,7 @@
   "installCommand": "npm install",
   "framework": "vite",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/api/(.*)", "destination": "/api" },
     { "source": "/api", "destination": "/api" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
