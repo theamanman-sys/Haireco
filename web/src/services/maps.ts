@@ -1,4 +1,51 @@
-export function loadMap() {
+import api from './api';
+
+export interface NearbyPlace {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  address: string;
+  phone: string;
+  type: string;
+  rating?: number;
+  website?: string;
+  photoUrl?: string;
+}
+
+export interface DbSalon {
+  id: string;
+  name: string;
+  address: string;
+  city: string;
+  latitude: number;
+  longitude: number;
+  averageRating: number;
+  coverImage?: string;
+  logo?: string;
+}
+
+function haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+export async function fetchNearbyDbSalons(lat: number, lng: number, radiusKm: number = 10): Promise<DbSalon[]> {
+  try {
+    const { data } = await api.get('/salons');
+    const salons: DbSalon[] = data.data || [];
+    return salons
+      .filter((s) => s.latitude && s.longitude && haversine(lat, lng, s.latitude, s.longitude) <= radiusKm)
+      .sort((a, b) => haversine(lat, lng, a.latitude, a.longitude) - haversine(lat, lng, b.latitude, b.longitude));
+  } catch {
+    return [];
+  }
+}
+
+export function loadLeaflet(): Promise<typeof import('leaflet')> {
   return import('leaflet');
 }
 
@@ -22,17 +69,7 @@ interface OverpassNode {
   };
 }
 
-export interface NearbyPlace {
-  id: string;
-  name: string;
-  lat: number;
-  lng: number;
-  address: string;
-  phone: string;
-  type: string;
-}
-
-export async function searchNearbyPlaces(lat: number, lng: number, radius: number = 3000): Promise<NearbyPlace[]> {
+export async function searchNearbyWithOverpass(lat: number, lng: number, radius: number = 3000): Promise<NearbyPlace[]> {
   const query = `
     [out:json];
     (
@@ -41,6 +78,9 @@ export async function searchNearbyPlaces(lat: number, lng: number, radius: numbe
       node["amenity"="spa"](around:${radius},${lat},${lng});
       node["shop"="beauty"](around:${radius},${lat},${lng});
       node["amenity"="hair_care"](around:${radius},${lat},${lng});
+      node["shop"="barber"](around:${radius},${lat},${lng});
+      node["shop"="nail_salon"](around:${radius},${lat},${lng});
+      node["shop"="massage"](around:${radius},${lat},${lng});
     );
     out body;
   `;
@@ -48,7 +88,7 @@ export async function searchNearbyPlaces(lat: number, lng: number, radius: numbe
   const res = await fetch('https://overpass-api.de/api/interpreter', {
     method: 'POST',
     body: 'data=' + encodeURIComponent(query),
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'HairEco/1.0' },
   });
 
   const data = await res.json();

@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
-import { Star, MapPin, Clock, Phone, Scissors, User } from 'lucide-react';
+import { Star, MapPin, Clock, Phone, Scissors, User, Globe, ExternalLink, Navigation } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTranslate } from '../i18n/useTranslate';
+import { loadLeaflet, darkTileUrl, tileAttribution } from '../services/maps';
+import 'leaflet/dist/leaflet.css';
 
 interface SalonDetailData {
   id: string;
@@ -14,15 +16,37 @@ interface SalonDetailData {
   city: string;
   phone: string;
   email: string;
+  website: string;
+  latitude: number;
+  longitude: number;
   averageRating: number;
   totalReviews: number;
   logo: string;
+  coverImage: string;
   images: string[];
   workingHours: any;
   services: { id: string; name: string; description: string; duration: number; price: number; category: string }[];
   staffMembers: { id: string; position: string; user: { firstName: string; lastName: string; avatar: string } }[];
   reviews: { id: string; rating: number; comment: string; createdAt: string; customer: { firstName: string; lastName: string; avatar: string } }[];
   _count: { reviews: number; bookings: number };
+}
+
+function LocationMap({ lat, lng, name }: { lat: number; lng: number; name: string }) {
+  const mapEl = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let map: any;
+    (async () => {
+      const L = await loadLeaflet();
+      if (!mapEl.current) return;
+      map = L.map(mapEl.current, { center: [lat, lng], zoom: 15, zoomControl: false, dragging: true });
+      L.tileLayer(darkTileUrl, { attribution: tileAttribution, maxZoom: 19 }).addTo(map);
+      L.marker([lat, lng]).addTo(map).bindPopup(`<strong>${name}</strong>`);
+    })();
+    return () => { map?.remove(); };
+  }, [lat, lng, name]);
+
+  return <div ref={mapEl} className="w-full h-48 rounded-lg border border-white/[0.065]" />;
 }
 
 export default function SalonDetail() {
@@ -63,23 +87,73 @@ export default function SalonDetail() {
   if (loading) return <div className="text-center py-20 text-cream/55">{t('salonDetail.loading')}</div>;
   if (!salon) return <div className="text-center py-20 text-cream/55">{t('salonDetail.notFound')}</div>;
 
+  const hasCoords = salon.latitude && salon.longitude;
+  const mapsUrl = hasCoords ? `https://www.google.com/maps?q=${salon.latitude},${salon.longitude}` : null;
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold text-cream" style={{ fontFamily: "'Playfair Display', serif" }}>{salon.name}</h1>
-            <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-cream/55">
-              <span className="flex items-center gap-1"><MapPin className="w-4 h-4" />{salon.address}, {salon.city}</span>
-              <span className="flex items-center gap-1"><Phone className="w-4 h-4" />{salon.phone}</span>
-              <span className="flex items-center gap-1"><Star className="w-4 h-4 text-gold-500" />{salon.averageRating.toFixed(1)} ({salon.totalReviews} {t('salonDetail.reviews')})</span>
+      {salon.coverImage && (
+        <div className="relative w-full h-64 sm:h-80 rounded-xl overflow-hidden mb-6 border border-white/[0.065]">
+          <img src={salon.coverImage} alt={salon.name} className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#1a1510]/80 to-transparent" />
+          <div className="absolute bottom-4 left-4 flex items-center gap-3">
+            {salon.logo && <img src={salon.logo} alt="" className="w-14 h-14 rounded-full border-2 border-cream/30 object-cover" />}
+            <div>
+              <h1 className="text-3xl font-bold text-cream" style={{ fontFamily: "'Playfair Display', serif" }}>{salon.name}</h1>
+              <div className="flex flex-wrap items-center gap-4 mt-1 text-sm text-cream/70">
+                <span className="flex items-center gap-1"><MapPin className="w-4 h-4" />{salon.address}, {salon.city}</span>
+                {salon.phone && <span className="flex items-center gap-1"><Phone className="w-4 h-4" />{salon.phone}</span>}
+                <span className="flex items-center gap-1"><Star className="w-4 h-4 text-gold-500" />{salon.averageRating.toFixed(1)} ({salon.totalReviews} {t('salonDetail.reviews')})</span>
+              </div>
             </div>
           </div>
+        </div>
+      )}
+      {!salon.coverImage && (
+        <div className="mb-6">
+          <div className="flex items-center gap-3 mb-2">
+            {salon.logo && <img src={salon.logo} alt="" className="w-14 h-14 rounded-full border-2 border-white/[0.065] object-cover" />}
+            <div>
+              <h1 className="text-3xl font-bold text-cream" style={{ fontFamily: "'Playfair Display', serif" }}>{salon.name}</h1>
+              <div className="flex flex-wrap items-center gap-4 mt-1 text-sm text-cream/55">
+                <span className="flex items-center gap-1"><MapPin className="w-4 h-4" />{salon.address}, {salon.city}</span>
+                {salon.phone && <span className="flex items-center gap-1"><Phone className="w-4 h-4" />{salon.phone}</span>}
+                <span className="flex items-center gap-1"><Star className="w-4 h-4 text-gold-500" />{salon.averageRating.toFixed(1)} ({salon.totalReviews} {t('salonDetail.reviews')})</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-6">
           {salon.description && (
             <div className="card">
               <h2 className="font-semibold mb-2 text-cream">{t('salonDetail.about')}</h2>
               <p className="text-cream/55 text-sm">{salon.description}</p>
+            </div>
+          )}
+
+          {hasCoords && (
+            <div className="card">
+              <h2 className="font-semibold mb-3 flex items-center gap-2 text-cream"><MapPin className="w-4 h-4" /> Location</h2>
+              <LocationMap lat={salon.latitude} lng={salon.longitude} name={salon.name} />
+              <div className="mt-3 flex flex-wrap gap-2">
+                <a
+                  href={mapsUrl!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs bg-primary-600/20 text-primary-600 px-3 py-1.5 rounded hover:bg-primary-600/30 transition-colors"
+                >
+                  <Navigation className="w-3.5 h-3.5" />
+                  Open in Google Maps
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+                <span className="text-xs text-cream/40 flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  {salon.latitude.toFixed(5)}, {salon.longitude.toFixed(5)}
+                </span>
+              </div>
             </div>
           )}
 
@@ -121,8 +195,37 @@ export default function SalonDetail() {
         </div>
 
         <div className="space-y-6">
-          <div className="card sticky top-24">
-            <h2 className="font-semibold mb-4 text-cream" style={{ fontFamily: "'Playfair Display', serif" }}>{t('salonDetail.bookAppointment')}</h2>
+          <div className="card sticky top-24 space-y-4">
+            {salon.phone && (
+              <a href={`tel:${salon.phone}`} className="flex items-center gap-2 text-sm text-cream/70 hover:text-primary-600 transition-colors">
+                <Phone className="w-4 h-4 text-primary-600" />
+                <span>{salon.phone}</span>
+              </a>
+            )}
+            {salon.website && (
+              <a href={salon.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-cream/70 hover:text-primary-600 transition-colors">
+                <Globe className="w-4 h-4 text-primary-600" />
+                <span className="truncate">{salon.website.replace(/^https?:\/\//, '')}</span>
+                <ExternalLink className="w-3 h-3 shrink-0" />
+              </a>
+            )}
+            {salon.address && (
+              <div className="flex items-start gap-2 text-sm text-cream/70">
+                <MapPin className="w-4 h-4 text-primary-600 shrink-0 mt-0.5" />
+                <span>{salon.address}, {salon.city}</span>
+              </div>
+            )}
+            {hasCoords && mapsUrl && (
+              <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary-600 hover:text-primary-500 transition-colors">
+                <Navigation className="w-4 h-4" />
+                <span>View on Google Maps</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
+
+            <hr className="border-white/[0.065]" />
+
+            <h2 className="font-semibold text-cream" style={{ fontFamily: "'Playfair Display', serif" }}>{t('salonDetail.bookAppointment')}</h2>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-cream/70 mb-1">{t('salonDetail.service')}</label>

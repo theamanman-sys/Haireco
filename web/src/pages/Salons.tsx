@@ -10,6 +10,7 @@ interface SalonSummary {
   name: string;
   address: string;
   city: string;
+  coverImage?: string;
   logo?: string;
   averageRating: number;
   totalReviews: number;
@@ -66,15 +67,24 @@ export default function Salons() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {salons.map((salon) => (
-                <Link to={`/salons/${salon.id}`} key={salon.id} className="card hover:shadow-2xl transition-all duration-300 group hover:border-primary-600/30">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="font-semibold text-lg text-cream group-hover:text-primary-600 transition-colors">{salon.name}</h3>
-                      <p className="text-sm text-cream/55 flex items-center gap-1 mt-1">
-                        <MapPin className="w-3 h-3" /> {salon.address}, {salon.city}
-                      </p>
+                <Link to={`/salons/${salon.id}`} key={salon.id} className="card hover:shadow-2xl transition-all duration-300 group hover:border-primary-600/30 overflow-hidden">
+                  {salon.coverImage && (
+                    <div className="relative h-40 -mx-4 -mt-4 mb-3 overflow-hidden">
+                      <img src={salon.coverImage} alt={salon.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#1a1510] via-transparent to-transparent" />
                     </div>
-                    <div className="flex items-center gap-1 text-sm bg-gold-50/10 text-gold-500 px-2 py-1 rounded">
+                  )}
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      {salon.logo && <img src={salon.logo} alt="" className="w-10 h-10 rounded-full border border-white/[0.065] object-cover shrink-0" />}
+                      <div>
+                        <h3 className="font-semibold text-lg text-cream group-hover:text-primary-600 transition-colors">{salon.name}</h3>
+                        <p className="text-sm text-cream/55 flex items-center gap-1 mt-1">
+                          <MapPin className="w-3 h-3" /> {salon.address}, {salon.city}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 text-sm bg-gold-50/10 text-gold-500 px-2 py-1 rounded shrink-0">
                       <Star className="w-3 h-3 fill-current" />
                       {salon.averageRating.toFixed(1)}
                     </div>

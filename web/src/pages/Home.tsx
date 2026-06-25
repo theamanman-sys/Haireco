@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
-import { Scissors, ShoppingBag, Briefcase, Calendar, Star, Users } from 'lucide-react';
+import { Scissors, ShoppingBag, Briefcase, Calendar, Star, Users, MapPin } from 'lucide-react';
 import { useTranslate } from '../i18n/useTranslate';
+import NearbyMap from '../components/maps/NearbyMap';
 
 export default function Home() {
   const t = useTranslate();
@@ -48,6 +49,15 @@ export default function Home() {
             </div>
           ))}
         </div>
+      </section>
+
+      <section className="max-w-7xl mx-auto px-4 py-16 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-3 mb-8">
+          <MapPin className="w-6 h-6 text-primary-600" />
+          <h2 className="text-3xl font-bold" style={{ fontFamily: "'Playfair Display', serif" }}>Nearby Salons, Spas & Barbers</h2>
+        </div>
+        <p className="text-cream/55 mb-6 max-w-2xl">Discover beauty salons, spas, barbershops, nail studios, and makeup studios near you. Allow location access to see places around you.</p>
+        <NearbyMap />
       </section>
 
       <section className="bg-ebony py-16 border-t border-white/[0.065]">
