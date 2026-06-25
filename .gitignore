@@ -17,3 +17,6 @@ web/dist/
 # Mobile
 mobile/.expo/
 mobile/node_modules/
+
+.vercel
+package-lock.json
