@@ -7,10 +7,7 @@
   "buildCommand": "cd server && npx prisma generate && cd ../web && npm run build",
   "outputDirectory": "web/dist",
   "installCommand": "npm install",
-  "framework": "vite",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api" },
-    { "source": "/api", "destination": "/api" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/api/:path*", "destination": "/api" }
   ]
 }
