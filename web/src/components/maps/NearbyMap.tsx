@@ -1,45 +1,55 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { loadLeaflet, darkTileUrl, tileAttribution, searchNearbyWithOverpass, fetchNearbyDbSalons, type NearbyPlace, type DbSalon } from '../../services/maps';
+import { loadGoogleMaps, searchNearbyWithGoogle, fetchNearbyDbSalons, type NearbyPlace, type DbSalon } from '../../services/maps';
 import { useTranslate } from '../../i18n/useTranslate';
 import { Star, MapPin, Navigation, RefreshCw, Crosshair } from 'lucide-react';
-import 'leaflet/dist/leaflet.css';
 
 const PLACE_TYPES: Record<string, string> = {
   beauty_salon: 'Beauty Salon',
   hair_care: 'Hair Salon',
   spa: 'Spa',
   barber: 'Barber',
+  nail_salon: 'Nail Salon',
+  massage: 'Massage',
+  makeup_artist: 'Makeup Studio',
   hairdresser: 'Hairdresser',
   beauty: 'Beauty Shop',
-  nail_salon: 'Nail Studio',
-  massage: 'Massage',
-  makeup: 'Makeup Studio',
+  point_of_interest: 'Point of Interest',
+  establishment: 'Establishment',
 };
 
 function getTypeEmoji(type: string): string {
   switch (type) {
-    case 'beauty_salon': return '💇';
+    case 'beauty_salon':
+    case 'beauty': return '\u{1F487}';
     case 'hair_care':
-    case 'hairdresser': return '✂️';
-    case 'spa': return '🧖';
-    case 'barber': return '💈';
-    case 'nail_salon': return '💅';
-    case 'massage': return '💆';
-    case 'makeup':
-    case 'beauty': return '💄';
-    default: return '📍';
+    case 'hairdresser': return '\u{2702}\u{FE0F}';
+    case 'spa': return '\u{1F9D6}';
+    case 'barber': return '\u{1F488}';
+    case 'nail_salon': return '\u{1F485}';
+    case 'massage': return '\u{1F486}';
+    case 'makeup_artist':
+    case 'makeup': return '\u{1F484}';
+    default: return '\u{1F4CD}';
   }
 }
 
-const MARKER_GROUPS: { id: string; markers: any[] }[] = [];
+const CATEGORY_COLORS: Record<string, string> = {
+  beauty_salon: '#c9a84c',
+  hair_care: '#c9a84c',
+  spa: '#7c3aed',
+  barber: '#800020',
+  nail_salon: '#ec4899',
+  massage: '#7c3aed',
+  makeup_artist: '#f59e0b',
+};
 
 export default function NearbyMap() {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<any>(null);
-  const userMarkerRef = useRef<any>(null);
-  const accCircleRef = useRef<any>(null);
-  const markersLayerRef = useRef<any>(null);
+  const mapInstance = useRef<google.maps.Map | null>(null);
+  const userMarkerRef = useRef<google.maps.Marker | null>(null);
+  const accCircleRef = useRef<google.maps.Circle | null>(null);
+  const markersRef = useRef<google.maps.Marker[]>([]);
   const watchIdRef = useRef<number | null>(null);
   const [places, setPlaces] = useState<NearbyPlace[]>([]);
   const [dbSalons, setDbSalons] = useState<DbSalon[]>([]);
@@ -50,69 +60,103 @@ export default function NearbyMap() {
   const [locating, setLocating] = useState(true);
   const t = useTranslate();
 
-  const clearMarkers = useCallback((map: any) => {
-    if (markersLayerRef.current) {
-      map.removeLayer(markersLayerRef.current);
-    }
-    markersLayerRef.current = null;
+  const clearMarkers = useCallback(() => {
+    markersRef.current.forEach((m) => m.setMap(null));
+    markersRef.current = [];
   }, []);
 
-  const fetchAndPlace = useCallback(async (map: any, L: any, lat: number, lng: number) => {
+  const createMarkerIcon = (type: string, isDb: boolean) => {
+    if (isDb) {
+      return {
+        path: google.maps.SymbolPath.SQUARE,
+        scale: 7,
+        fillColor: '#c9a84c',
+        fillOpacity: 1,
+        strokeColor: '#800020',
+        strokeWeight: 2,
+      };
+    }
+    const color = CATEGORY_COLORS[type] || '#6b7280';
+    return {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: 8,
+      fillColor: color,
+      fillOpacity: 0.9,
+      strokeColor: '#ffffff',
+      strokeWeight: 1.5,
+    };
+  };
+
+  const fetchAndPlace = useCallback(async (map: google.maps.Map, lat: number, lng: number) => {
     setSearching(true);
-    clearMarkers(map);
+    clearMarkers();
 
     try {
-      const [overpassResults, dbResults] = await Promise.all([
-        searchNearbyWithOverpass(lat, lng, 5000),
+      const [googleResults, dbResults] = await Promise.all([
+        searchNearbyWithGoogle(lat, lng, 5000),
         fetchNearbyDbSalons(lat, lng, 50),
       ]);
 
-      setPlaces(overpassResults);
+      setPlaces(googleResults);
       setDbSalons(dbResults);
 
-      const markerLayer = L.layerGroup().addTo(map);
-      markersLayerRef.current = markerLayer;
+      const bounds = new google.maps.LatLngBounds();
+      bounds.extend(new google.maps.LatLng(lat, lng));
 
-      const bounds = L.latLngBounds([lat, lng]);
+      const infoWindow = new google.maps.InfoWindow();
 
-      overpassResults.forEach((place) => {
-        bounds.extend([place.lat, place.lng]);
-        const marker = L.marker([place.lat, place.lng]).addTo(markerLayer);
+      googleResults.forEach((place) => {
+        const pos = new google.maps.LatLng(place.lat, place.lng);
+        bounds.extend(pos);
+        const marker = new google.maps.Marker({
+          position: pos,
+          map,
+          icon: createMarkerIcon(place.type, false),
+          title: place.name,
+        });
         const typeLabel = PLACE_TYPES[place.type] || place.type.replace(/_/g, ' ');
-        marker.bindPopup(`
-          <div style="color:#1a1510;font-size:13px;max-width:200px">
-            <strong>${place.name}</strong><br/>
-            <span style="color:#666;font-size:11px">${typeLabel}</span><br/>
-            ${place.address ? place.address + '<br/>' : ''}
-            ${place.phone ? place.phone : ''}
-          </div>
-        `);
-      });
-
-      const dbIcon = L.divIcon({
-        className: '',
-        html: `<div style="width:14px;height:14px;background:#c9a84c;border:2px solid #800020;border-radius:3px;box-shadow:0 0 6px rgba(0,0,0,0.4)"></div>`,
-        iconSize: [14, 14],
-        iconAnchor: [7, 7],
+        marker.addListener('click', () => {
+          infoWindow.setContent(`
+            <div style="color:#1a1510;font-size:13px;max-width:200px;font-family:system-ui">
+              <strong>${place.name}</strong><br/>
+              <span style="color:#666;font-size:11px">${typeLabel}</span><br/>
+              ${place.address ? place.address + '<br/>' : ''}
+              ${place.phone ? place.phone : ''}
+              ${place.rating ? `<span style="color:#d4a000">\u2605 ${place.rating.toFixed(1)}</span>` : ''}
+            </div>
+          `);
+          infoWindow.open(map, marker);
+        });
+        markersRef.current.push(marker);
       });
 
       dbResults.forEach((salon) => {
         if (!salon.latitude || !salon.longitude) return;
-        bounds.extend([salon.latitude, salon.longitude]);
-        const marker = L.marker([salon.latitude, salon.longitude], { icon: dbIcon }).addTo(markerLayer);
-        marker.bindPopup(`
-          <div style="color:#1a1510;font-size:13px;max-width:220px">
-            ${salon.coverImage ? `<img src="${salon.coverImage}" alt="${salon.name}" style="width:100%;height:80px;object-fit:cover;border-radius:4px;margin-bottom:6px" />` : ''}
-            <strong>${salon.name}</strong><br/>
-            <span style="color:#666;font-size:11px">${salon.address}</span><br/>
-            ${salon.averageRating ? `<span style="color:#d4a000">★ ${salon.averageRating.toFixed(1)}</span>` : ''}
-            <br/><a href="/salons/${salon.id}" style="color:#800020;font-size:12px;text-decoration:underline">View details →</a>
-          </div>
-        `);
+        const pos = new google.maps.LatLng(salon.latitude, salon.longitude);
+        bounds.extend(pos);
+        const marker = new google.maps.Marker({
+          position: pos,
+          map,
+          icon: createMarkerIcon('', true),
+          title: salon.name,
+        });
+        marker.addListener('click', () => {
+          infoWindow.setContent(`
+            <div style="color:#1a1510;font-size:13px;max-width:220px;font-family:system-ui">
+              ${salon.coverImage ? `<img src="${salon.coverImage}" alt="${salon.name}" style="width:100%;height:80px;object-fit:cover;border-radius:4px;margin-bottom:6px" />` : ''}
+              <strong>${salon.name}</strong><br/>
+              <span style="color:#666;font-size:11px">${salon.address}</span><br/>
+              ${salon.averageRating ? `<span style="color:#d4a000">\u2605 ${salon.averageRating.toFixed(1)}</span>` : ''}
+              <br/><a href="/salons/${salon.id}" style="color:#800020;font-size:12px;text-decoration:underline">View details \u2192</a>
+            </div>
+          `);
+          infoWindow.open(map, marker);
+        });
+        markersRef.current.push(marker);
       });
 
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
-      if (overpassResults.length === 0 && dbResults.length === 0) map.setView([lat, lng], 14);
+      map.fitBounds(bounds, 60);
+      if (googleResults.length === 0 && dbResults.length === 0) map.setCenter(new google.maps.LatLng(lat, lng));
     } catch {
       // silent
     } finally {
@@ -120,35 +164,42 @@ export default function NearbyMap() {
     }
   }, [clearMarkers]);
 
-  const updateUserLocation = useCallback(async (map: any, L: any, lat: number, lng: number, accuracy: number) => {
+  const updateUserLocation = useCallback(async (map: google.maps.Map, lat: number, lng: number, accuracy: number) => {
     setUserPos({ lat, lng, acc: Math.round(accuracy) });
 
-    if (userMarkerRef.current) map.removeLayer(userMarkerRef.current);
-    if (accCircleRef.current) map.removeLayer(accCircleRef.current);
+    if (userMarkerRef.current) userMarkerRef.current.setMap(null);
+    if (accCircleRef.current) accCircleRef.current.setMap(null);
 
-    const userIcon = L.divIcon({
-      className: '',
-      html: `<div style="width:18px;height:18px;background:#800020;border:3px solid #c9a84c;border-radius:50%;box-shadow:0 0 12px rgba(128,0,32,0.6);position:relative"><div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:6px;height:6px;background:#fff;border-radius:50%"></div></div>`,
-      iconSize: [18, 18],
-      iconAnchor: [9, 9],
+    userMarkerRef.current = new google.maps.Marker({
+      position: new google.maps.LatLng(lat, lng),
+      map,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 10,
+        fillColor: '#800020',
+        fillOpacity: 1,
+        strokeColor: '#c9a84c',
+        strokeWeight: 3,
+      },
+      zIndex: 9999,
+      title: 'You are here',
     });
 
-    userMarkerRef.current = L.marker([lat, lng], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
-    userMarkerRef.current.bindPopup(`<div style="color:#1a1510;font-size:13px"><strong>You are here</strong><br/><span style="color:#666;font-size:11px">Accuracy: ±${Math.round(accuracy)}m</span></div>`);
-
     if (accuracy < 500) {
-      accCircleRef.current = L.circle([lat, lng], {
+      accCircleRef.current = new google.maps.Circle({
+        center: new google.maps.LatLng(lat, lng),
         radius: accuracy,
-        color: '#800020',
+        map,
         fillColor: '#800020',
         fillOpacity: 0.08,
-        weight: 1,
-        opacity: 0.3,
-      }).addTo(map);
+        strokeColor: '#800020',
+        strokeOpacity: 0.3,
+        strokeWeight: 1,
+      });
     }
   }, []);
 
-  const startWatching = useCallback(async (map: any, L: any) => {
+  const startWatching = useCallback(async (map: google.maps.Map) => {
     if (!navigator.geolocation) {
       setError(t('salons.mapGeolocationError'));
       setLoading(false);
@@ -164,12 +215,13 @@ export default function NearbyMap() {
         setLocating(false);
         setLoading(false);
 
-        await updateUserLocation(map, L, lat, lng, accuracy);
+        await updateUserLocation(map, lat, lng, accuracy);
 
         if (firstFix) {
-          map.setView([lat, lng], 14);
+          map.setCenter(new google.maps.LatLng(lat, lng));
+          map.setZoom(14);
           firstFix = false;
-          await fetchAndPlace(map, L, lat, lng);
+          await fetchAndPlace(map, lat, lng);
         }
       },
       (err) => {
@@ -185,13 +237,13 @@ export default function NearbyMap() {
 
   const handleRefresh = useCallback(async () => {
     if (!mapInstance.current || !userPos) return;
-    const L = await loadLeaflet();
-    await fetchAndPlace(mapInstance.current, L, userPos.lat, userPos.lng);
+    await fetchAndPlace(mapInstance.current, userPos.lat, userPos.lng);
   }, [userPos, fetchAndPlace]);
 
   const handleRecenter = useCallback(() => {
     if (!mapInstance.current || !userPos) return;
-    mapInstance.current.setView([userPos.lat, userPos.lng], 14, { animate: true });
+    mapInstance.current.panTo(new google.maps.LatLng(userPos.lat, userPos.lng));
+    mapInstance.current.setZoom(14);
   }, [userPos]);
 
   useEffect(() => {
@@ -199,22 +251,35 @@ export default function NearbyMap() {
 
     (async () => {
       try {
-        const L = await loadLeaflet();
+        await loadGoogleMaps();
         if (!mapRef.current || cancelled) return;
 
-        const map = L.map(mapRef.current, {
-          center: [9.03, 38.74],
+        const map = new google.maps.Map(mapRef.current, {
+          center: { lat: 9.03, lng: 38.74 },
           zoom: 13,
+          styles: [
+            { elementType: 'geometry', stylers: [{ color: '#1a1510' }] },
+            { elementType: 'labels.text.fill', stylers: [{ color: '#8a8a8a' }] },
+            { elementType: 'labels.text.stroke', stylers: [{ color: '#1a1510' }] },
+            { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2a2520' }] },
+            { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#6b6b6b' }] },
+            { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0e1610' }] },
+            { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+            { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+            { featureType: 'administrative', elementType: 'geometry', stylers: [{ color: '#2a2520' }] },
+            { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#1e1a14' }] },
+          ],
+          disableDefaultUI: true,
           zoomControl: true,
+          mapTypeControl: false,
+          scaleControl: false,
+          streetViewControl: false,
+          rotateControl: false,
+          fullscreenControl: false,
         });
         mapInstance.current = map;
 
-        L.tileLayer(darkTileUrl, {
-          attribution: tileAttribution,
-          maxZoom: 19,
-        }).addTo(map);
-
-        await startWatching(map, L);
+        await startWatching(map);
       } catch {
         if (!cancelled) {
           setError(t('salons.mapLoadError'));
@@ -229,7 +294,9 @@ export default function NearbyMap() {
       if (watchIdRef.current !== null) {
         navigator.geolocation.clearWatch(watchIdRef.current);
       }
-      mapInstance.current?.remove();
+      markersRef.current.forEach((m) => m.setMap(null));
+      userMarkerRef.current?.setMap(null);
+      accCircleRef.current?.setMap(null);
     };
   }, []);
 
@@ -274,7 +341,7 @@ export default function NearbyMap() {
           <Navigation className="w-3 h-3" />
           <span>
             {userPos.lat.toFixed(4)}, {userPos.lng.toFixed(4)}
-            {userPos.acc > 0 && <span className="ml-1">(±{userPos.acc}m)</span>}
+            {userPos.acc > 0 && <span className="ml-1">(\u00B1{userPos.acc}m)</span>}
           </span>
         </div>
       )}
@@ -298,6 +365,9 @@ export default function NearbyMap() {
                   <MapPin className="w-3.5 h-3.5 shrink-0 text-primary-600" />
                 )}
                 <span className="truncate">{s.name}</span>
+                {s.distance !== undefined && (
+                  <span className="text-cream/40 shrink-0 ml-auto">{s.distance < 1 ? `${Math.round(s.distance * 1000)}m` : `${s.distance.toFixed(1)}km`}</span>
+                )}
                 {s.averageRating > 0 && (
                   <span className="text-gold-500 shrink-0 ml-auto flex items-center gap-0.5">
                     <Star className="w-2.5 h-2.5 fill-current" />{s.averageRating.toFixed(1)}
@@ -316,7 +386,7 @@ export default function NearbyMap() {
 
       {places.length > 0 && (
         <div>
-          <p className="text-xs text-cream/40 mb-2">{places.length} places found on OpenStreetMap</p>
+          <p className="text-xs text-cream/40 mb-2">{places.length} places found on Google Places</p>
           <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
             {places.map((p) => (
               <span key={p.id} className="flex items-center gap-1 text-xs bg-ebony border border-white/[0.065] rounded px-2 py-1 text-cream/60">

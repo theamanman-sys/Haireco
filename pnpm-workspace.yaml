@@ -1,5 +1,10 @@
 packages:
-  - 'shared/*'
+  - 'shared'
   - 'server'
   - 'web'
   - 'mobile'
+allowBuilds:
+  '@prisma/client': true
+  '@prisma/engines': true
+  esbuild: true
+  prisma: true

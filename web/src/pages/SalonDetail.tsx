@@ -5,8 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import { Star, MapPin, Clock, Phone, Scissors, User, Globe, ExternalLink, Navigation } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTranslate } from '../i18n/useTranslate';
-import { loadLeaflet, darkTileUrl, tileAttribution } from '../services/maps';
-import 'leaflet/dist/leaflet.css';
+import { loadGoogleMaps } from '../services/maps';
 
 interface SalonDetailData {
   id: string;
@@ -35,15 +34,39 @@ function LocationMap({ lat, lng, name }: { lat: number; lng: number; name: strin
   const mapEl = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    let map: any;
+    let map: google.maps.Map;
     (async () => {
-      const L = await loadLeaflet();
+      await loadGoogleMaps();
       if (!mapEl.current) return;
-      map = L.map(mapEl.current, { center: [lat, lng], zoom: 15, zoomControl: false, dragging: true });
-      L.tileLayer(darkTileUrl, { attribution: tileAttribution, maxZoom: 19 }).addTo(map);
-      L.marker([lat, lng]).addTo(map).bindPopup(`<strong>${name}</strong>`);
+      map = new google.maps.Map(mapEl.current, {
+        center: { lat, lng },
+        zoom: 15,
+        styles: [
+          { elementType: 'geometry', stylers: [{ color: '#1a1510' }] },
+          { elementType: 'labels.text.fill', stylers: [{ color: '#8a8a8a' }] },
+          { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2a2520' }] },
+          { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0e1610' }] },
+          { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+          { featureType: 'landscape', elementType: 'geometry', stylers: [{ color: '#1e1a14' }] },
+        ],
+        disableDefaultUI: true,
+        zoomControl: false,
+        gestureHandling: 'cooperative',
+      });
+      new google.maps.Marker({
+        position: { lat, lng },
+        map,
+        title: name,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: '#800020',
+          fillOpacity: 1,
+          strokeColor: '#c9a84c',
+          strokeWeight: 3,
+        },
+      });
     })();
-    return () => { map?.remove(); };
   }, [lat, lng, name]);
 
   return <div ref={mapEl} className="w-full h-48 rounded-lg border border-white/[0.065]" />;

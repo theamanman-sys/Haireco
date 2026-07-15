@@ -3,6 +3,7 @@ import {
   createSalon,
   getSalons,
   getSalonById,
+  getNearbySalons,
   updateSalon,
   createService,
   getSalonServices,
@@ -13,6 +14,7 @@ import { authenticate, authorize } from '../middleware/auth';
 const router = Router();
 
 router.get('/', getSalons as any);
+router.get('/nearby', getNearbySalons as any);
 router.get('/:id', getSalonById as any);
 router.post('/', authenticate, authorize('SALON_OWNER'), createSalon as any);
 router.put('/:id', authenticate, authorize('SALON_OWNER'), updateSalon as any);

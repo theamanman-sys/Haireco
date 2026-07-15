@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const API_KEY = process.env.VITE_GOOGLE_MAPS_API_KEY || '';
+const API_KEY = process.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyDOpQYmoc48dPQC2pQKjG4atN1VZDqc0Rg';
 const prisma = new PrismaClient();
 
 interface GooglePlaceResult {
@@ -19,6 +19,7 @@ interface GooglePlaceResult {
   photos?: { photo_reference: string; height: number; width: number }[];
   geometry: { location: { lat: number; lng: number } };
   types?: string[];
+  price_level?: number;
   editorial_summary?: { overview?: string };
 }
 
@@ -58,7 +59,7 @@ function getPhotoUrl(photoRef: string, maxWidth = 800): string {
   return `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${maxWidth}&photoreference=${photoRef}&key=${API_KEY}`;
 }
 
-function defaultHours(): Record<string, { open: string; close: string; isClosed: boolean }> {
+function defaultHours() {
   return {
     monday: { open: '09:00', close: '19:00', isClosed: false },
     tuesday: { open: '09:00', close: '19:00', isClosed: false },
@@ -74,8 +75,8 @@ function getServicesForType(type: string): { name: string; duration: number; pri
   switch (type) {
     case 'salon':
       return [
-        { name: "Women's Haircut & Blow-dry", duration: 60, price: 350, category: ServiceCategory.HAIRCUT },
-        { name: "Men's Haircut", duration: 30, price: 150, category: ServiceCategory.BARBER },
+        { name: 'Women\'s Haircut & Blow-dry', duration: 60, price: 350, category: ServiceCategory.HAIRCUT },
+        { name: 'Men\'s Haircut', duration: 30, price: 150, category: ServiceCategory.BARBER },
         { name: 'Hair Coloring (Full)', duration: 120, price: 1500, category: ServiceCategory.COLORING },
         { name: 'Blow-dry & Style', duration: 45, price: 400, category: ServiceCategory.STYLING },
         { name: 'Deep Conditioning Treatment', duration: 30, price: 250, category: ServiceCategory.TREATMENT },
@@ -138,7 +139,7 @@ async function nearbySearch(type: string, keyword: string, location: string): Pr
     const res = await fetch(reqUrl, { headers: { 'User-Agent': 'HairEco/1.0' } });
     const data = await res.json() as { status: string; results: GooglePlaceResult[]; next_page_token?: string; error_message?: string };
     if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-      console.log(`  Warning: Google API error (${type || keyword}): ${data.status} - ${data.error_message || ''}`);
+      console.log(`  ⚠️  Google API error (${type || keyword}): ${data.status} - ${data.error_message || ''}`);
       break;
     }
     if (data.results) {
@@ -154,7 +155,7 @@ async function nearbySearch(type: string, keyword: string, location: string): Pr
 }
 
 async function getPlaceDetails(placeId: string): Promise<GooglePlaceResult | null> {
-  const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,place_id,formatted_address,formatted_phone_number,website,rating,user_ratings_total,opening_hours,photos,geometry,types,editorial_summary&key=${API_KEY}`;
+  const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,place_id,formatted_address,formatted_phone_number,website,rating,user_ratings_total,opening_hours,photos,geometry,types,price_level,editorial_summary&key=${API_KEY}`;
   try {
     const res = await fetch(url, { headers: { 'User-Agent': 'HairEco/1.0' } });
     const data = await res.json() as { status: string; result: GooglePlaceResult };
@@ -165,110 +166,68 @@ async function getPlaceDetails(placeId: string): Promise<GooglePlaceResult | nul
   }
 }
 
-const FALLBACK_PLACES: GooglePlaceResult[] = [
-  { place_id: 'fb1', name: 'Eyerusalem Beauty Spot', geometry: { location: { lat: 8.99000, lng: 38.79280 } }, types: ['beauty_salon'], formatted_address: 'Bole Area, Addis Ababa' },
-  { place_id: 'fb2', name: 'Abyssinia Beauty Salon', geometry: { location: { lat: 8.99251, lng: 38.78294 } }, types: ['beauty_salon'], formatted_address: 'Bole Area, Addis Ababa' },
-  { place_id: 'fb3', name: 'Hamelmal Beauty Salon', geometry: { location: { lat: 9.01941, lng: 38.75431 } }, types: ['beauty_salon'], formatted_address: 'Bole, Wollo Sefer, Addis Ababa' },
-  { place_id: 'fb4', name: 'Konjo Professional Salon', geometry: { location: { lat: 8.99108, lng: 38.76702 } }, types: ['beauty_salon'], formatted_address: 'Bole, near Dembel, Addis Ababa' },
-  { place_id: 'fb5', name: 'Mimi Beauty', geometry: { location: { lat: 8.95161, lng: 38.75992 } }, types: ['makeup_artist'], formatted_address: 'Bole Medhanealem, Addis Ababa' },
-  { place_id: 'fb6', name: 'Smart Barber', geometry: { location: { lat: 8.99506, lng: 38.73025 } }, types: ['barber'], formatted_address: 'Kirkos Sub-city, Addis Ababa' },
-  { place_id: 'fb7', name: 'Sadula Beauty Salon and Spa', geometry: { location: { lat: 8.99797, lng: 38.76724 } }, types: ['spa', 'beauty_salon'], formatted_address: '626/35, Bole, Addis Ababa', formatted_phone_number: '+251911607664' },
-  { place_id: 'fb8', name: 'Maji Day Spa', geometry: { location: { lat: 8.99354, lng: 38.76627 } }, types: ['spa'], formatted_address: 'Bole, Addis Ababa' },
-  { place_id: 'fb9', name: 'Boston Day Spa', geometry: { location: { lat: 8.99066, lng: 38.78389 } }, types: ['spa'], formatted_address: 'Bole, Addis Ababa', formatted_phone_number: '+251116636557' },
-  { place_id: 'fb10', name: 'Soreti Spa', geometry: { location: { lat: 8.99524, lng: 38.77568 } }, types: ['spa'], formatted_address: 'Bole Atlas, Addis Ababa' },
-  { place_id: 'fb11', name: 'Signature Spa', geometry: { location: { lat: 8.98777, lng: 38.77166 } }, types: ['spa'], formatted_address: 'W 03 H 1049, Kazanchis, Addis Ababa', formatted_phone_number: '+251911331134' },
-  { place_id: 'fb12', name: 'Diva Massage', geometry: { location: { lat: 8.98730, lng: 38.73739 } }, types: ['spa', 'massage'], formatted_address: 'Kirkos, Addis Ababa' },
-  { place_id: 'fb13', name: 'Timo Xiire Salon', geometry: { location: { lat: 8.98091, lng: 38.77691 } }, types: ['beauty_salon'], formatted_address: 'Bole, Addis Ababa' },
-  { place_id: 'fb14', name: 'Oasis Salon & Spa', geometry: { location: { lat: 9.00532, lng: 38.78066 } }, types: ['beauty_salon', 'spa'], formatted_address: 'Bole, near Bole Airport, Addis Ababa' },
-  { place_id: 'fb15', name: 'Beky Hair & Make Up Studio', geometry: { location: { lat: 9.03225, lng: 38.77224 } }, types: ['makeup_artist', 'hair_care'], formatted_address: 'CMC, Addis Ababa' },
-  { place_id: 'fb16', name: 'Selina Morocco Massage', geometry: { location: { lat: 9.00978, lng: 38.78184 } }, types: ['spa', 'massage'], formatted_address: 'Bole, Addis Ababa' },
-  { place_id: 'fb17', name: 'Sally Beauty Supplies', geometry: { location: { lat: 9.03385, lng: 38.76308 } }, types: ['makeup_artist'], formatted_address: 'Bole, Dembel Area, Addis Ababa' },
-  { place_id: 'fb18', name: 'Arsema Barber', geometry: { location: { lat: 9.02037, lng: 38.77647 } }, types: ['barber'], formatted_address: 'Bole, Wollo Sefer, Addis Ababa' },
-  { place_id: 'fb19', name: 'Muke Barbery', geometry: { location: { lat: 9.02506, lng: 38.73393 } }, types: ['barber'], formatted_address: '22 Mazoria, Addis Ababa' },
-  { place_id: 'fb20', name: "Gentlemen's Barbershop", geometry: { location: { lat: 9.00009, lng: 38.77971 } }, types: ['barber'], formatted_address: 'Bole, Addis Ababa' },
-  { place_id: 'fb21', name: 'Be Wellness and Spa', geometry: { location: { lat: 8.98321, lng: 38.79628 } }, types: ['spa'], formatted_address: 'CMC, Gurd Shola, Addis Ababa' },
-  { place_id: 'fb22', name: 'Belay Women Salon', geometry: { location: { lat: 8.99456, lng: 38.86121 } }, types: ['beauty_salon'], formatted_address: 'Kara, Bole, Addis Ababa' },
-  { place_id: 'fb23', name: 'Lidu Beauty', geometry: { location: { lat: 8.98645, lng: 38.75864 } }, types: ['makeup_artist', 'beauty_salon'], formatted_address: 'Bole, Addis Ababa' },
-  { place_id: 'fb24', name: 'Grace Beauty Salon', geometry: { location: { lat: 9.00725, lng: 38.79407 } }, types: ['beauty_salon'], formatted_address: 'Bole, Haile Garment Area, Addis Ababa' },
-  { place_id: 'fb25', name: 'Ella Cosmetics', geometry: { location: { lat: 9.04208, lng: 38.71364 } }, types: ['makeup_artist'], formatted_address: 'Atena Tera, Addis Ketema, Addis Ababa', formatted_phone_number: '+251920526979' },
-  { place_id: 'fb26', name: 'Yenas Beauty Salon', geometry: { location: { lat: 9.05328, lng: 38.75876 } }, types: ['beauty_salon'], formatted_address: 'Ayat Area, Addis Ababa' },
-  { place_id: 'fb27', name: 'Fere Massage', geometry: { location: { lat: 8.96095, lng: 38.76692 } }, types: ['spa', 'massage'], formatted_address: 'Bole Michael, Addis Ababa' },
-];
-
 async function main() {
-  console.log('Fetching beauty places from Google Places API...');
-  const location = '9.03,38.74';
-  const seen = new Map<string, GooglePlaceResult>();
-  let apiFailed = false;
-
-  if (API_KEY) {
-    for (const search of SEARCHES) {
-      const label = search.type || search.keyword;
-      console.log(`  Searching: ${label}...`);
-      const results = await nearbySearch(search.type, search.keyword, location);
-      console.log(`    Found ${results.length} results`);
-
-      if (results.length === 0 && seen.size === 0) {
-        apiFailed = true;
-      }
-
-      for (const r of results) {
-        if (r.name && !seen.has(r.place_id) && !r.name.toLowerCase().includes('removed')) {
-          seen.set(r.place_id, {
-            place_id: r.place_id,
-            name: r.name,
-            formatted_address: r.formatted_address || '',
-            formatted_phone_number: '',
-            rating: r.rating,
-            user_ratings_total: r.user_ratings_total,
-            geometry: r.geometry,
-            types: r.types,
-            photos: r.photos,
-            opening_hours: r.opening_hours,
-          });
-        }
-      }
-      await new Promise(r => setTimeout(r, 500));
-    }
-
-    console.log(`\n  Total unique places from Google: ${seen.size}`);
-
-    if (seen.size === 0) {
-      console.log('Google API returned no results (may have referer restrictions). Using fallback places...');
-      await seedDatabase(FALLBACK_PLACES);
-      return;
-    }
-
-    const places = Array.from(seen.values());
-    console.log('  Enriching with place details...');
-
-    const enriched: GooglePlaceResult[] = [];
-    for (let i = 0; i < places.length; i++) {
-      const p = places[i];
-      const details = await getPlaceDetails(p.place_id);
-      enriched.push(details || p);
-      if ((i + 1) % 10 === 0) console.log(`    ${i + 1}/${places.length} enriched...`);
-      await new Promise(r => setTimeout(r, 100));
-    }
-
-    const types: Record<string, number> = {};
-    for (const p of enriched) {
-      const t = inferType(p);
-      types[t] = (types[t] || 0) + 1;
-    }
-    console.log('\n  Type breakdown:');
-    for (const [t, c] of Object.entries(types)) {
-      console.log(`    ${t}: ${c}`);
-    }
-
-    await seedDatabase(enriched);
-  } else {
-    console.log('No Google Maps API key found. Using fallback places...');
-    await seedDatabase(FALLBACK_PLACES);
+  if (!API_KEY) {
+    console.error('❌ Google Maps API key not found. Set VITE_GOOGLE_MAPS_API_KEY in server/.env');
+    process.exit(1);
   }
-}
 
-async function seedDatabase(enriched: GooglePlaceResult[]) {
+  console.log('🌍 Fetching beauty places from Google Places API...');
+  const location = '9.03,38.74';
+
+  const seen = new Map<string, GooglePlaceResult>();
+
+  for (const search of SEARCHES) {
+    const label = search.type || search.keyword;
+    console.log(`  🔍 Searching: ${label}...`);
+    const results = await nearbySearch(search.type, search.keyword, location);
+    console.log(`    Found ${results.length} results`);
+
+    for (const r of results) {
+      if (r.name && !seen.has(r.place_id) && !r.name.toLowerCase().includes('removed')) {
+        seen.set(r.place_id, {
+          place_id: r.place_id,
+          name: r.name,
+          formatted_address: r.formatted_address || r.vicinity || '',
+          formatted_phone_number: '',
+          rating: r.rating,
+          user_ratings_total: r.user_ratings_total,
+          geometry: r.geometry,
+          types: r.types,
+          photos: r.photos,
+          price_level: r.price_level,
+          opening_hours: r.opening_hours,
+        });
+      }
+    }
+    await new Promise(r => setTimeout(r, 500));
+  }
+
+  console.log(`\n  📊 Total unique places found: ${seen.size}`);
+
+  const places = Array.from(seen.values());
+  console.log('\n  Enriching with place details...');
+
+  const enriched: GooglePlaceResult[] = [];
+  for (let i = 0; i < places.length; i++) {
+    const p = places[i];
+    const details = await getPlaceDetails(p.place_id);
+    const result = details || p;
+    enriched.push(result);
+    if ((i + 1) % 10 === 0) console.log(`    ${i + 1}/${places.length} enriched...`);
+    await new Promise(r => setTimeout(r, 100));
+  }
+
+  const types: Record<string, number> = {};
+  for (const p of enriched) {
+    const t = inferType(p);
+    types[t] = (types[t] || 0) + 1;
+  }
+  console.log('\n  📋 Type breakdown:');
+  for (const [t, c] of Object.entries(types)) {
+    console.log(`    ${t}: ${c}`);
+  }
+
   console.log('\n  Cleaning database...');
   await prisma.review.deleteMany();
   await prisma.queueEntry.deleteMany();
@@ -290,7 +249,7 @@ async function seedDatabase(enriched: GooglePlaceResult[]) {
   await prisma.order.deleteMany();
   await prisma.product.deleteMany();
   await prisma.user.deleteMany();
-  console.log('  Cleaned existing data');
+  console.log('  ✅ Cleaned existing data');
 
   console.log('\n  Creating subscription plans...');
   const plans = [
@@ -322,9 +281,9 @@ async function seedDatabase(enriched: GooglePlaceResult[]) {
     const description = p.editorial_summary?.overview || `${type === 'salon' ? 'Beauty salon' : type === 'barber' ? 'Barbershop' : type === 'spa' ? 'Spa and wellness center' : type === 'nails' ? 'Nail studio' : 'Makeup studio'} located in Addis Ababa. Rated ${p.rating || 'N/A'} on Google.`;
 
     const photoRefs = p.photos?.slice(0, 5).map(ph => ph.photo_reference) || [];
-    const coverUrl = photoRefs.length > 0 && API_KEY ? getPhotoUrl(photoRefs[0]) : '';
-    const logoUrl = photoRefs.length > 0 && API_KEY ? getPhotoUrl(photoRefs[0], 200) : '';
-    const images = photoRefs.length > 0 && API_KEY ? photoRefs.map(ref => getPhotoUrl(ref)) : [];
+    const coverUrl = photoRefs.length > 0 ? getPhotoUrl(photoRefs[0]) : '';
+    const logoUrl = photoRefs.length > 0 ? getPhotoUrl(photoRefs[0], 200) : '';
+    const images = photoRefs.map(ref => getPhotoUrl(ref));
 
     const ownerUser = await prisma.user.create({
       data: {
@@ -391,7 +350,7 @@ async function seedDatabase(enriched: GooglePlaceResult[]) {
         ownerId: ownerProfile.id,
         name,
         description,
-        address: address.replace(/,\s*Ethiopia$/, '').trim() || address,
+        address: address.replace(/,\s*Ethiopia$/, '').replace(/,\s*Ethiopia\s*$/, '').trim() || address,
         city: 'Addis Ababa',
         country: 'Ethiopia',
         phone: phone || '',
@@ -531,11 +490,11 @@ async function seedDatabase(enriched: GooglePlaceResult[]) {
     }
   }
 
-  console.log(`\nDone! Seeded ${enriched.length} places:`);
+  console.log(`\n✅ Done! Seeded ${enriched.length} places from Google Places API:`);
   console.log(`  ${totalServices} services, ${totalStaff} staff`);
-  console.log('\nLogin: google_salon_0@haireco.com / password123');
+  console.log('\n🔐 Login: google_salon_0@haireco.com / password123');
 }
 
 main()
-  .catch(e => { console.error('Error:', e); process.exit(1); })
+  .catch(e => { console.error('❌', e); process.exit(1); })
   .finally(() => prisma.$disconnect());
