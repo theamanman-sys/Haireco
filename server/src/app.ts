@@ -9,7 +9,17 @@ import routes from './routes';
 const app = express();
 
 app.use(helmet());
-app.use(cors({ origin: config.corsOrigin, credentials: true }));
+app.use(cors({
+  origin: (origin, callback) => {
+    const allowed = config.corsOrigin.split(',').map(s => s.trim());
+    if (!origin || allowed.includes(origin) || allowed.includes('*')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+}));
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
