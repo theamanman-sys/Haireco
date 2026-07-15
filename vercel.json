@@ -1,9 +1,4 @@
 {
-  "functions": {
-    "api/index.ts": {
-      "includeFiles": "server/**"
-    }
-  },
   "buildCommand": "cd server && npx prisma generate && cd ../web && npm run build",
   "outputDirectory": "web/dist",
   "installCommand": "npm install",
