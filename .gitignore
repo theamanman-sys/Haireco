@@ -20,3 +20,4 @@ mobile/node_modules/
 
 .vercel
 package-lock.json
+pnpm-lock.yaml
