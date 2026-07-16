@@ -39,7 +39,7 @@ export const searchNearbyPlaces = async (
       try {
         const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&type=${type}&key=${GOOGLE_API_KEY}`;
         const response = await fetch(url);
-        const data = await response.json();
+        const data: any = await response.json();
 
         if (data.status === 'OK' && data.results) {
           for (const place of data.results) {
