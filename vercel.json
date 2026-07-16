@@ -3,6 +3,7 @@
   "outputDirectory": "web/dist",
   "installCommand": "npm install",
   "rewrites": [
-    { "source": "/((?!assets/|api/).*)", "destination": "/index.html" }
+    { "source": "/api/(.*)", "destination": "https://haireco.onrender.com/api/$1" },
+    { "source": "/((?!assets/).*)", "destination": "/index.html" }
   ]
 }
