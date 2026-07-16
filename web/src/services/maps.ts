@@ -124,47 +124,11 @@ const BEAUTY_PLACE_TYPES = [
 ];
 
 export async function searchNearbyWithGoogle(lat: number, lng: number, radius: number = 5000): Promise<NearbyPlace[]> {
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-  if (!apiKey) {
-    console.warn('Google Maps API key not configured');
+  try {
+    const { data } = await api.get(`/maps/nearby?lat=${lat}&lng=${lng}&radius=${radius}`);
+    return data.data || [];
+  } catch (err) {
+    console.error('Failed to search nearby places via server:', err);
     return [];
   }
-
-  const allResults: GooglePlaceResult[] = [];
-  const seenPlaceIds = new Set<string>();
-
-  for (const type of BEAUTY_PLACE_TYPES) {
-    try {
-      const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&type=${type}&key=${apiKey}`;
-      const res = await fetch(url);
-      const data: GooglePlacesResponse = await res.json();
-
-      if (data.status === 'OK' && data.results) {
-        for (const place of data.results) {
-          if (!seenPlaceIds.has(place.place_id)) {
-            seenPlaceIds.add(place.place_id);
-            allResults.push(place);
-          }
-        }
-      } else if (data.status === 'REQUEST_DENIED') {
-        console.error('Google Places API request denied:', data.error_message);
-        return [];
-      }
-    } catch (err) {
-      console.error(`Failed to search ${type}:`, err);
-    }
-  }
-
-  return allResults.map((place) => ({
-    id: place.place_id,
-    name: place.name,
-    lat: place.geometry.location.lat,
-    lng: place.geometry.location.lng,
-    address: place.vicinity || '',
-    phone: place.formatted_phone_number || '',
-    type: place.types?.[0] || '',
-    rating: place.rating,
-    website: place.website,
-    photos: place.photos?.map((p) => `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${p.photo_reference}&key=${apiKey}`),
-  }));
 }
