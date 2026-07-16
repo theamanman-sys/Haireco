@@ -1,48 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { loadGoogleMaps, searchNearbyWithGoogle, fetchNearbyDbSalons, type NearbyPlace, type DbSalon } from '../../services/maps';
+import { loadGoogleMaps, fetchNearbyDbSalons, type DbSalon } from '../../services/maps';
 import { useTranslate } from '../../i18n/useTranslate';
 import { Star, MapPin, Navigation, RefreshCw, Crosshair } from 'lucide-react';
-
-const PLACE_TYPES: Record<string, string> = {
-  beauty_salon: 'Beauty Salon',
-  hair_care: 'Hair Salon',
-  spa: 'Spa',
-  barber: 'Barber',
-  nail_salon: 'Nail Salon',
-  massage: 'Massage',
-  makeup_artist: 'Makeup Studio',
-  hairdresser: 'Hairdresser',
-  beauty: 'Beauty Shop',
-  point_of_interest: 'Point of Interest',
-  establishment: 'Establishment',
-};
-
-function getTypeEmoji(type: string): string {
-  switch (type) {
-    case 'beauty_salon':
-    case 'beauty': return '\u{1F487}';
-    case 'hair_care':
-    case 'hairdresser': return '\u{2702}\u{FE0F}';
-    case 'spa': return '\u{1F9D6}';
-    case 'barber': return '\u{1F488}';
-    case 'nail_salon': return '\u{1F485}';
-    case 'massage': return '\u{1F486}';
-    case 'makeup_artist':
-    case 'makeup': return '\u{1F484}';
-    default: return '\u{1F4CD}';
-  }
-}
-
-const CATEGORY_COLORS: Record<string, string> = {
-  beauty_salon: '#c9a84c',
-  hair_care: '#c9a84c',
-  spa: '#7c3aed',
-  barber: '#800020',
-  nail_salon: '#ec4899',
-  massage: '#7c3aed',
-  makeup_artist: '#f59e0b',
-};
 
 export default function NearbyMap() {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -51,7 +11,6 @@ export default function NearbyMap() {
   const accCircleRef = useRef<google.maps.Circle | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
   const watchIdRef = useRef<number | null>(null);
-  const [places, setPlaces] = useState<NearbyPlace[]>([]);
   const [dbSalons, setDbSalons] = useState<DbSalon[]>([]);
   const [userPos, setUserPos] = useState<{ lat: number; lng: number; acc: number } | null>(null);
   const [error, setError] = useState('');
@@ -65,25 +24,14 @@ export default function NearbyMap() {
     markersRef.current = [];
   }, []);
 
-  const createMarkerIcon = (type: string, isDb: boolean) => {
-    if (isDb) {
-      return {
-        path: google.maps.SymbolPath.SQUARE,
-        scale: 7,
-        fillColor: '#c9a84c',
-        fillOpacity: 1,
-        strokeColor: '#800020',
-        strokeWeight: 2,
-      };
-    }
-    const color = CATEGORY_COLORS[type] || '#6b7280';
+  const createMarkerIcon = () => {
     return {
-      path: google.maps.SymbolPath.CIRCLE,
-      scale: 8,
-      fillColor: color,
-      fillOpacity: 0.9,
-      strokeColor: '#ffffff',
-      strokeWeight: 1.5,
+      path: google.maps.SymbolPath.SQUARE,
+      scale: 7,
+      fillColor: '#c9a84c',
+      fillOpacity: 1,
+      strokeColor: '#800020',
+      strokeWeight: 2,
     };
   };
 
@@ -92,43 +40,14 @@ export default function NearbyMap() {
     clearMarkers();
 
     try {
-      const [googleResults, dbResults] = await Promise.all([
-        searchNearbyWithGoogle(lat, lng, 5000),
-        fetchNearbyDbSalons(lat, lng, 50),
-      ]);
+      const dbResults = await fetchNearbyDbSalons(lat, lng, 50);
 
-      setPlaces(googleResults);
       setDbSalons(dbResults);
 
       const bounds = new google.maps.LatLngBounds();
       bounds.extend(new google.maps.LatLng(lat, lng));
 
       const infoWindow = new google.maps.InfoWindow();
-
-      googleResults.forEach((place) => {
-        const pos = new google.maps.LatLng(place.lat, place.lng);
-        bounds.extend(pos);
-        const marker = new google.maps.Marker({
-          position: pos,
-          map,
-          icon: createMarkerIcon(place.type, false),
-          title: place.name,
-        });
-        const typeLabel = PLACE_TYPES[place.type] || place.type.replace(/_/g, ' ');
-        marker.addListener('click', () => {
-          infoWindow.setContent(`
-            <div style="color:#1a1510;font-size:13px;max-width:200px;font-family:system-ui">
-              <strong>${place.name}</strong><br/>
-              <span style="color:#666;font-size:11px">${typeLabel}</span><br/>
-              ${place.address ? place.address + '<br/>' : ''}
-              ${place.phone ? place.phone : ''}
-              ${place.rating ? `<span style="color:#d4a000">\u2605 ${place.rating.toFixed(1)}</span>` : ''}
-            </div>
-          `);
-          infoWindow.open(map, marker);
-        });
-        markersRef.current.push(marker);
-      });
 
       dbResults.forEach((salon) => {
         if (!salon.latitude || !salon.longitude) return;
@@ -137,7 +56,7 @@ export default function NearbyMap() {
         const marker = new google.maps.Marker({
           position: pos,
           map,
-          icon: createMarkerIcon('', true),
+          icon: createMarkerIcon(),
           title: salon.name,
         });
         marker.addListener('click', () => {
@@ -156,7 +75,7 @@ export default function NearbyMap() {
       });
 
       map.fitBounds(bounds, 60);
-      if (googleResults.length === 0 && dbResults.length === 0) map.setCenter(new google.maps.LatLng(lat, lng));
+      if (dbResults.length === 0) map.setCenter(new google.maps.LatLng(lat, lng));
     } catch {
       // silent
     } finally {
@@ -346,7 +265,7 @@ export default function NearbyMap() {
         </div>
       )}
 
-      {!locating && !error && places.length === 0 && dbSalons.length === 0 && !searching && (
+      {!locating && !error && dbSalons.length === 0 && !searching && (
         <p className="text-sm text-cream/55">No places found in your area. Try panning the map and clicking refresh.</p>
       )}
 
@@ -384,19 +303,6 @@ export default function NearbyMap() {
         </div>
       )}
 
-      {places.length > 0 && (
-        <div>
-          <p className="text-xs text-cream/40 mb-2">{places.length} places found on Google Places</p>
-          <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
-            {places.map((p) => (
-              <span key={p.id} className="flex items-center gap-1 text-xs bg-ebony border border-white/[0.065] rounded px-2 py-1 text-cream/60">
-                <span>{getTypeEmoji(p.type)}</span>
-                <span>{p.name}</span>
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
